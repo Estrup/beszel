@@ -276,6 +276,10 @@ func (h *Hub) registerApiRoutes(se *core.ServeEvent) error {
 		apiAuth.GET("/containers/logs", h.getContainerLogs)
 		// get container info
 		apiAuth.GET("/containers/info", h.getContainerInfo)
+		// container control operations
+		apiAuth.POST("/containers/start", h.startContainer)
+		apiAuth.POST("/containers/stop", h.stopContainer)
+		apiAuth.POST("/containers/restart", h.restartContainer)
 	}
 	return nil
 }
@@ -340,6 +344,74 @@ func (h *Hub) getContainerInfo(e *core.RequestEvent) error {
 	return h.containerRequestHandler(e, func(system *systems.System, containerID string) (string, error) {
 		return system.FetchContainerInfoFromAgent(containerID)
 	}, "info")
+}
+
+// startContainer handles POST /api/beszel/containers/start requests
+func (h *Hub) startContainer(e *core.RequestEvent) error {
+	systemID := e.Request.URL.Query().Get("system")
+	containerID := e.Request.URL.Query().Get("container")
+
+	if systemID == "" || containerID == "" {
+		return e.JSON(http.StatusBadRequest, map[string]string{"error": "system and container parameters are required"})
+	}
+
+	system, err := h.sm.GetSystem(systemID)
+	if err != nil {
+		return e.JSON(http.StatusNotFound, map[string]string{"error": "system not found"})
+	}
+
+	result, err := system.StartContainer(containerID)
+	if err != nil {
+		return e.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
+	}
+
+	return e.JSON(http.StatusOK, map[string]string{"result": result})
+}
+
+// stopContainer handles POST /api/beszel/containers/stop requests
+func (h *Hub) stopContainer(e *core.RequestEvent) error {
+	systemID := e.Request.URL.Query().Get("system")
+	containerID := e.Request.URL.Query().Get("container")
+	timeout := 10 // default timeout
+
+	if systemID == "" || containerID == "" {
+		return e.JSON(http.StatusBadRequest, map[string]string{"error": "system and container parameters are required"})
+	}
+
+	system, err := h.sm.GetSystem(systemID)
+	if err != nil {
+		return e.JSON(http.StatusNotFound, map[string]string{"error": "system not found"})
+	}
+
+	result, err := system.StopContainer(containerID, timeout)
+	if err != nil {
+		return e.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
+	}
+
+	return e.JSON(http.StatusOK, map[string]string{"result": result})
+}
+
+// restartContainer handles POST /api/beszel/containers/restart requests
+func (h *Hub) restartContainer(e *core.RequestEvent) error {
+	systemID := e.Request.URL.Query().Get("system")
+	containerID := e.Request.URL.Query().Get("container")
+	timeout := 10 // default timeout
+
+	if systemID == "" || containerID == "" {
+		return e.JSON(http.StatusBadRequest, map[string]string{"error": "system and container parameters are required"})
+	}
+
+	system, err := h.sm.GetSystem(systemID)
+	if err != nil {
+		return e.JSON(http.StatusNotFound, map[string]string{"error": "system not found"})
+	}
+
+	result, err := system.RestartContainer(containerID, timeout)
+	if err != nil {
+		return e.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
+	}
+
+	return e.JSON(http.StatusOK, map[string]string{"result": result})
 }
 
 // getSmartData handles GET /api/beszel/smart requests

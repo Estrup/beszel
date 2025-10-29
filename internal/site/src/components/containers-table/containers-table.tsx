@@ -258,6 +258,53 @@ async function getInfoHtml(container: ContainerRecord): Promise<string> {
 	}
 }
 
+async function startContainer(container: ContainerRecord): Promise<void> {
+    try {
+        await pb.send("/api/beszel/containers/start", {
+            method: "POST",
+            query: {
+                system: container.system,
+                container: container.id,
+            }
+        })
+    } catch (error) {
+        console.error(error)
+        throw error
+    }
+}
+
+async function stopContainer(container: ContainerRecord, timeout: number = 10): Promise<void> {
+    try {
+        await pb.send("/api/beszel/containers/stop", {
+            method: "POST",
+            query: {
+                system: container.system,
+                container: container.id,
+                timeout: timeout.toString(),
+            }
+        })
+    } catch (error) {
+        console.error(error)
+        throw error
+    }
+}
+
+async function restartContainer(container: ContainerRecord, timeout: number = 10): Promise<void> {
+    try {
+        await pb.send("/api/beszel/containers/restart", {
+            method: "POST",
+            query: {
+                system: container.system,
+                container: container.id,
+                timeout: timeout.toString(),
+            }
+        })
+    } catch (error) {
+        console.error(error)
+        throw error
+    }
+}
+
 function ContainerSheet({ sheetOpen, setSheetOpen, activeContainer }: { sheetOpen: boolean, setSheetOpen: (open: boolean) => void, activeContainer: RefObject<ContainerRecord | null> }) {
 	const container = activeContainer.current
 	if (!container) return null
@@ -326,7 +373,13 @@ function ContainerSheet({ sheetOpen, setSheetOpen, activeContainer }: { sheetOpe
 			<Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
 				<SheetContent className="w-full sm:max-w-220 p-2">
 					<SheetHeader>
-						<SheetTitle>{container.name}</SheetTitle>
+						<SheetTitle>{container.name}
+							ª<div className="flex gap-2">
+								<Button size="sm" onClick={() => startContainer(container)}>Start</Button>
+								<Button size="sm" onClick={() => stopContainer(container)}>Stop</Button>
+								<Button size="sm" onClick={() => restartContainer(container)}>Restart</Button>
+							</div>
+						</SheetTitle>
 						<SheetDescription className="flex flex-wrap items-center gap-x-2 gap-y-1">
 							<Link className="hover:underline" href={getPagePath($router, "system", { id: container.system })}>{$allSystemsById.get()[container.system]?.name ?? ""}</Link>
 							<Separator orientation="vertical" className="h-2.5 bg-muted-foreground opacity-70" />
@@ -494,3 +547,4 @@ function InfoFullscreenDialog({ open, onOpenChange, infoDisplay, containerName }
 		</Dialog>
 	)
 }
+

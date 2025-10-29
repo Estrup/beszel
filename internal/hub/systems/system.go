@@ -340,6 +340,42 @@ func (sys *System) FetchContainerLogsFromAgent(containerID string) (string, erro
 	return sys.fetchStringFromAgentViaSSH(common.GetContainerLogs, common.ContainerLogsRequest{ContainerID: containerID}, "no logs in response")
 }
 
+// StartContainer starts a stopped container on the agent
+func (sys *System) StartContainer(containerID string) (string, error) {
+	// fetch via websocket
+	if sys.WsConn != nil && sys.WsConn.IsConnected() {
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+		return sys.WsConn.RequestContainerControl(ctx, common.StartContainer, containerID, 0)
+	}
+	// fetch via SSH
+	return sys.fetchStringFromAgentViaSSH(common.StartContainer, common.ContainerControlRequest{ContainerID: containerID}, "no response")
+}
+
+// StopContainer stops a running container on the agent
+func (sys *System) StopContainer(containerID string, timeoutSeconds int) (string, error) {
+	// fetch via websocket
+	if sys.WsConn != nil && sys.WsConn.IsConnected() {
+		ctx, cancel := context.WithTimeout(context.Background(), time.Duration(timeoutSeconds+5)*time.Second)
+		defer cancel()
+		return sys.WsConn.RequestContainerControl(ctx, common.StopContainer, containerID, timeoutSeconds)
+	}
+	// fetch via SSH
+	return sys.fetchStringFromAgentViaSSH(common.StopContainer, common.ContainerControlRequest{ContainerID: containerID, TimeoutSeconds: timeoutSeconds}, "no response")
+}
+
+// RestartContainer restarts a container on the agent
+func (sys *System) RestartContainer(containerID string, timeoutSeconds int) (string, error) {
+	// fetch via websocket
+	if sys.WsConn != nil && sys.WsConn.IsConnected() {
+		ctx, cancel := context.WithTimeout(context.Background(), time.Duration(timeoutSeconds+5)*time.Second)
+		defer cancel()
+		return sys.WsConn.RequestContainerControl(ctx, common.RestartContainer, containerID, timeoutSeconds)
+	}
+	// fetch via SSH
+	return sys.fetchStringFromAgentViaSSH(common.RestartContainer, common.ContainerControlRequest{ContainerID: containerID, TimeoutSeconds: timeoutSeconds}, "no response")
+}
+
 // FetchSmartDataFromAgent fetches SMART data from the agent
 func (sys *System) FetchSmartDataFromAgent() (map[string]any, error) {
 	// fetch via websocket

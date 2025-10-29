@@ -50,6 +50,9 @@ func NewHandlerRegistry() *HandlerRegistry {
 	registry.Register(common.GetContainerLogs, &GetContainerLogsHandler{})
 	registry.Register(common.GetContainerInfo, &GetContainerInfoHandler{})
 	registry.Register(common.GetSmartData, &GetSmartDataHandler{})
+	registry.Register(common.StartContainer, &StartContainerHandler{})
+	registry.Register(common.StopContainer, &StopContainerHandler{})
+	registry.Register(common.RestartContainer, &RestartContainerHandler{})
 
 	return registry
 }
@@ -173,4 +176,88 @@ func (h *GetSmartDataHandler) Handle(hctx *HandlerContext) error {
 	}
 	data := hctx.Agent.smartManager.GetCurrentData()
 	return hctx.SendResponse(data, hctx.RequestID)
+}
+
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+
+// StartContainerHandler handles container start requests
+type StartContainerHandler struct{}
+
+func (h *StartContainerHandler) Handle(hctx *HandlerContext) error {
+	if hctx.Agent.dockerManager == nil {
+		return errors.New("docker not available")
+	}
+
+	var req common.ContainerControlRequest
+	if err := cbor.Unmarshal(hctx.Request.Data, &req); err != nil {
+		return err
+	}
+
+	ctx := context.Background()
+	if err := hctx.Agent.dockerManager.startContainer(ctx, req.ContainerID); err != nil {
+		return err
+	}
+
+	return hctx.SendResponse("ok", hctx.RequestID)
+}
+
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+
+// StopContainerHandler handles container stop requests
+type StopContainerHandler struct{}
+
+func (h *StopContainerHandler) Handle(hctx *HandlerContext) error {
+	if hctx.Agent.dockerManager == nil {
+		return errors.New("docker not available")
+	}
+
+	var req common.ContainerControlRequest
+	if err := cbor.Unmarshal(hctx.Request.Data, &req); err != nil {
+		return err
+	}
+
+	// Default to 10 seconds if timeout not specified
+	timeout := req.TimeoutSeconds
+	if timeout == 0 {
+		timeout = 10
+	}
+
+	ctx := context.Background()
+	if err := hctx.Agent.dockerManager.stopContainer(ctx, req.ContainerID, timeout); err != nil {
+		return err
+	}
+
+	return hctx.SendResponse("ok", hctx.RequestID)
+}
+
+////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
+
+// RestartContainerHandler handles container restart requests
+type RestartContainerHandler struct{}
+
+func (h *RestartContainerHandler) Handle(hctx *HandlerContext) error {
+	if hctx.Agent.dockerManager == nil {
+		return errors.New("docker not available")
+	}
+
+	var req common.ContainerControlRequest
+	if err := cbor.Unmarshal(hctx.Request.Data, &req); err != nil {
+		return err
+	}
+
+	// Default to 10 seconds if timeout not specified
+	timeout := req.TimeoutSeconds
+	if timeout == 0 {
+		timeout = 10
+	}
+
+	ctx := context.Background()
+	if err := hctx.Agent.dockerManager.restartContainer(ctx, req.ContainerID, timeout); err != nil {
+		return err
+	}
+
+	return hctx.SendResponse("ok", hctx.RequestID)
 }

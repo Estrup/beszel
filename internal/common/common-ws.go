@@ -18,6 +18,12 @@ const (
 	GetContainerInfo
 	// Request SMART data from agent
 	GetSmartData
+	// Start a stopped container
+	StartContainer
+	// Stop a running container
+	StopContainer
+	// Restart a container
+	RestartContainer
 	// Add new actions here...
 )
 
@@ -64,4 +70,9 @@ type ContainerLogsRequest struct {
 
 type ContainerInfoRequest struct {
 	ContainerID string `cbor:"0,keyasint"`
+}
+
+type ContainerControlRequest struct {
+	ContainerID    string `cbor:"0,keyasint"`
+	TimeoutSeconds int    `cbor:"1,keyasint,omitempty"` // For stop/restart operations
 }

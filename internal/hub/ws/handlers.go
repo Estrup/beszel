@@ -111,6 +111,11 @@ func (ws *WsConn) RequestContainerInfo(ctx context.Context, containerID string) 
 	return ws.requestContainerStringViaWS(ctx, common.GetContainerInfo, common.ContainerInfoRequest{ContainerID: containerID}, "no info in response")
 }
 
+// RequestContainerControl performs a control operation (start/stop/restart) on a container via WebSocket.
+func (ws *WsConn) RequestContainerControl(ctx context.Context, action common.WebSocketAction, containerID string, timeoutSeconds int) (string, error) {
+	return ws.requestContainerStringViaWS(ctx, action, common.ContainerControlRequest{ContainerID: containerID, TimeoutSeconds: timeoutSeconds}, "no response from container control")
+}
+
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////

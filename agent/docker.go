@@ -347,6 +347,28 @@ func parseDockerStatus(status string) (string, container.DockerHealth) {
 	return trimmed, container.DockerHealthNone
 }
 
+// restartContainer restarts a container by ID
+func (dm *dockerManager) restartContainer(ctx context.Context, containerID string, timeoutSeconds int) error {
+    endpoint := fmt.Sprintf("http://localhost/containers/%s/restart?t=%d", containerID, timeoutSeconds)
+    req, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, nil)
+    if err != nil {
+        return err
+    }
+
+    resp, err := dm.client.Do(req)
+    if err != nil {
+        return err
+    }
+    defer resp.Body.Close()
+
+    if resp.StatusCode != http.StatusNoContent && resp.StatusCode != http.StatusOK {
+        body, _ := io.ReadAll(io.LimitReader(resp.Body, 1024))
+        return fmt.Errorf("restart request failed: %s: %s", resp.Status, strings.TrimSpace(string(body)))
+    }
+
+    return nil
+}
+
 // Updates stats for individual container with cache-time-aware delta tracking
 func (dm *dockerManager) updateContainerStats(ctr *container.ApiInfo, cacheTimeMs uint16) error {
 	name := ctr.Names[0][1:]
@@ -657,6 +679,72 @@ func (dm *dockerManager) getLogs(ctx context.Context, containerID string) (strin
 	}
 
 	return builder.String(), nil
+}
+
+// startContainer starts a stopped container
+func (dm *dockerManager) startContainer(ctx context.Context, containerID string) error {
+	endpoint := fmt.Sprintf("http://localhost/containers/%s/start", containerID)
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, nil)
+	if err != nil {
+		return err
+	}
+
+	resp, err := dm.client.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusNoContent && resp.StatusCode != http.StatusNotModified {
+		body, _ := io.ReadAll(io.LimitReader(resp.Body, 1024))
+		return fmt.Errorf("start request failed: %s: %s", resp.Status, strings.TrimSpace(string(body)))
+	}
+
+	return nil
+}
+
+// stopContainer stops a running container
+func (dm *dockerManager) stopContainer(ctx context.Context, containerID string, timeoutSeconds int) error {
+	endpoint := fmt.Sprintf("http://localhost/containers/%s/stop?t=%d", containerID, timeoutSeconds)
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, nil)
+	if err != nil {
+		return err
+	}
+
+	resp, err := dm.client.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusNoContent && resp.StatusCode != http.StatusNotModified {
+		body, _ := io.ReadAll(io.LimitReader(resp.Body, 1024))
+		return fmt.Errorf("stop request failed: %s: %s", resp.Status, strings.TrimSpace(string(body)))
+	}
+
+	return nil
+}
+
+// restartContainer restarts a container
+func (dm *dockerManager) restartContainer(ctx context.Context, containerID string, timeoutSeconds int) error {
+	endpoint := fmt.Sprintf("http://localhost/containers/%s/restart?t=%d", containerID, timeoutSeconds)
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, nil)
+	if err != nil {
+		return err
+	}
+
+	resp, err := dm.client.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusNoContent {
+		body, _ := io.ReadAll(io.LimitReader(resp.Body, 1024))
+		return fmt.Errorf("restart request failed: %s: %s", resp.Status, strings.TrimSpace(string(body)))
+	}
+
+	return nil
 }
 
 func decodeDockerLogStream(reader io.Reader, builder *strings.Builder) error {
